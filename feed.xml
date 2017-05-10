@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<generator uri="http://jekyllrb.com" version="3.4.3">Jekyll</generator>
+<link href="/feed.xml" rel="self" type="application/atom+xml" />
+<link href="/" rel="alternate" type="text/html" />
+<updated>2017-05-10T22:56:12+01:00</updated>
+<id>/</id>
+<subtitle>I am a research engineer at Context Scout and an OSS developer for NLUlite.
+</subtitle>
+<entry>
+<title>Representing dialogues</title>
+<link href="/chatbot/2017/05/10/hurried-dialogues.html" rel="alternate" type="text/html" title="Representing dialogues" />
+<published>2017-05-10T00:18:39+01:00</published>
+<updated>2017-05-10T00:18:39+01:00</updated>
+<id>/chatbot/2017/05/10/hurried-dialogues</id>
+<content type="html" xml:base="/chatbot/2017/05/10/hurried-dialogues.html">&lt;h1 id=&quot;representing-dialogues&quot;&gt;Representing dialogues&lt;/h1&gt;
+
+&lt;p&gt;For decades there has been a lot of interest in building
+chatbots. Natural language dialog generation is nonetheless in its
+infancy.&lt;/p&gt;
+
+&lt;p&gt;Traditional approaches use a rule-based engine to react to a user’s
+input. These methods allow the programmer to design the behavior of a
+chatbot according to specific patterns. For example, a formalization
+of this techique can be found in the script language
+&lt;a href=&quot;http://www.alicebot.org/aiml.html&quot;&gt;AIML&lt;/a&gt;. The main problem with
+rule-based systems is that they are about as good as the time invested
+into creating the rules.&lt;/p&gt;
+
+&lt;p&gt;A more recent approach has emerged where the reaction to a user’s
+input is understood as a translation problem: the query is
+‘translated’ into a reply. This approach leaves room for learning the
+proper replies from a corpus of conversations.&lt;/p&gt;
+
+&lt;p&gt;An example of this approach has been pioneered by Lee and Vinalis in
+&lt;a href=&quot;https://arxiv.org/abs/1506.05869&quot;&gt;this article&lt;/a&gt;, where a sequence to
+sequence model is employed for the translation mechanism. The sequence
+to sequence model employes an ‘encoder’ that transforms a sentence
+into a vector. This vector is then fed into a ‘decoder’ which
+transforms it into a proper natural language reply.&lt;/p&gt;
+
+&lt;p&gt;In order for this approach to be successful, the vector sandwiched
+between the encoder and the decoder should contain information about&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The Semantics of the sentence (in particular entities and relations)&lt;/li&gt;
+  &lt;li&gt;The pragmatic content&lt;/li&gt;
+  &lt;li&gt;The general topic of the conversation&lt;/li&gt;
+  &lt;li&gt;The intention of the user, which can be a long term goal beyond the
+current sentence&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Encoding all this information in a low-dimensional vector with a
+single RNN is a tall task, possibly unfeasible. For this reason
+&lt;a href=&quot;https://arxiv.org/abs/1701.07149&quot;&gt;hierarchical structures&lt;/a&gt; of
+encoders-decoders have been proposed as an improvement to the original
+article&lt;/p&gt;
+
+&lt;p&gt;One of these approaches is going to be successfull eventually. In this
+page we want to play with the high level structure of a conversation.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-space-of-all-sentences&quot;&gt;The space of all sentences&lt;/h2&gt;
+
+&lt;p&gt;In the following we use the movie conversations available in the
+&lt;a href=&quot;https://www.cs.cornell.edu/~cristian/Cornell_Movie-Dialogs_Corpus.html&quot;&gt;Cornell Movie
+database&lt;/a&gt;.
+All the movie lines that appear here are taken from that dataset and
+are used under the &lt;a href=&quot;https://www.cs.cornell.edu/%7Ecristian/memorability_files/README.v1.0.txt&quot;&gt;terms of the
+dataset&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;All the sentences of the corpus can be translated into vectors, for
+example using the excellent doc2Vec model in
+&lt;a href=&quot;https://radimrehurek.com/gensim/&quot;&gt;gensim&lt;/a&gt;.  More refined methods
+would not add much to the coarse-level description used here.&lt;/p&gt;
+
+&lt;p&gt;Let us represent these vectors using t-SNE with low perplexity (here
+we used 5).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images//vectors.png&quot; alt=&quot;Image with all the vectors&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;A granular structure appears (effectively by construction upon using
+low perplexity). These ‘grains’ are clusters of similar sentences,
+like ‘Goodbye!’, ‘Goodbye, my friend!’, ‘ Goodbye, my love, a thousand
+times goodbye.’&lt;/p&gt;
+
+&lt;p&gt;Let us take a look at the first ten lines of the corpus:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-txt&quot;&gt;
+A: Colonel Durnford... William Vereker. I hear you 've been seeking
+ Officers?
+B: Good ones, yes, Mr Vereker. Gentlemen who can ride and shoot
+
+
+A: Your orders, Mr Vereker?
+B: I'm to take the Sikali with the main column to the river
+
+
+A: Lord Chelmsford seems to want me to stay back with my Basutos.
+B: I think Chelmsford wants a good man on the border Why he fears a
+flanking attack and requires a steady Commander in reserve.
+
+
+A: Well I assure you, Sir, I have no desire to create difficulties. 45
+B: And I assure you, you do not In fact I'd be obliged for your best
+advice. What have your scouts seen?
+
+
+A: So far only their scouts. But we have had reports of a small Impi farther north, over there. 
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This dialogue describes a path in the abstract space of sentences.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/path.png&quot; alt=&quot;Image with a path&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;clustering-sentences&quot;&gt;Clustering sentences&lt;/h2&gt;
+
+&lt;p&gt;Every dialogue appears as a path in the space of sentences. All these
+paths would together constitute a &lt;em&gt;network&lt;/em&gt;. In order to generalize the
+paths, we can cluster together all the ‘grains’ in the previous
+picture.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/clusters.png&quot; alt=&quot;Image with the clusters&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Each of these red balls is the centroid of a cluster of ~300
+sentences. After clustering, one can build the network of all
+sentences by drawing an edge between nodes that have a sentence that
+follows another one. The result is the rather horrible picture&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/network.png&quot; alt=&quot;Image with the network&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This network is a connected graph, i.e. there are no isolated
+nodes. Note that this clustering needs to be done to create a
+connected graph in the sentence space. Without the clustering of
+sentences every node would be a sentence unique to a specific
+conversation.&lt;/p&gt;
+
+&lt;h2 id=&quot;generating-dialogues-of-two-people-in-a-hurry-computational-comedy&quot;&gt;Generating dialogues of two people in a hurry (computational comedy)&lt;/h2&gt;
+
+&lt;p&gt;Given a starting point and an end point, two people will naturally
+speak trying to end the conversation as soon as possible.&lt;/p&gt;
+
+&lt;p&gt;According to the network representation, this means that the two
+people will try to reach the end of the conversation using the
+shortest path. One example is the following (generated) dialogue.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-txt&quot;&gt;
+Alice:  Hello! How are you?
+Bob:  I should have listened to my wife. She said you were up to no good. Gossip.
+
+Alice:   Yeh, that'd be real nice of ya, Mr. Lonneman.
+Bob:  I can explain about the portal, darling.
+
+Alice:   Thanks
+Bob: Goodbye!
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The corresponding path is&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/chat_path.png&quot; alt=&quot;Image with a path&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The sentence number 1 is ‘Hello! How are you?’, whereas number 5 is
+‘Goodbye!’. It is interesting to see that these two sentences are
+nicely projected at opposite sides of the map.&lt;/p&gt;
+
+&lt;p&gt;All the lines in the dialogue are taken from the Cornell movie
+dataset. No single sentence is original. What is presentented here is
+simply a re-arrangement of the sentences according to the following
+algorith:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-txt&quot;&gt;1. Read an input line and a goal sentence ('Hello!', 'Goodbye!').
+2. Find the node in the sentence network that is closest to the input line.
+3. Find the shortest path between this line and the goal.
+4. Find the next vertex in this path
+5. Choose randomly a movie line belonging to this next vertex (each vertex
+represent a cluster of ~300 lines)
+4. Repeat with this last line as an input upon keeping the same goal
+sentence.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There is an additional random component: Associating a node to an
+input line is a noisy process. Given the same initial and ending
+sentences there can be also variations in the number of nodes, as the
+following examples show:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-txt&quot;&gt;
+Alice:  Hello! How are you?
+Bob:  How come nobody knows about him? And you do?
+
+Alice:   You kids are making too much damn noise.
+Bob:  I dont recollect mentioning a friend.
+
+Alice:   Leave him alone, he's got swine fever.
+Bob:  Indisposed, sir.
+
+Alice: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  I'm serious, man. Don't mention it. Ever.
+
+Alice:   Gotta be one of his disciples or something.
+Bob:  Leave me alone! He's going to kill me!!
+
+Alice:   Well, I held it like an egg.
+Bob: Goodbye!
+
+
+--
+
+
+Alice:  Hello! How are you?
+Bob:  Take a look for yourself.
+
+Alice: I'm dying, Claudia.  I have cancer. I have cancer and I'm
+dying, soon. It's metastasized in my bones and I --
+Bob:  You're not contagious are you?
+
+Alice:   They guys here aren't going to be able to hold out until battalion shows up.
+Bob:  Right.  Bombardier, to me please.
+
+Alice: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  I'm Jill. I really like your show. I think you're great.
+
+Alice:   I had to come.  To be sure you were okay.
+Bob: Just everything.  You.  California.  The beach.  This spot right
+here.  I feel like I belong here, you know?  It just feels right.
+
+Alice:   The friend of John's that was staying at your house.
+Bob:  Leave him alone. She's his mother, not yours.
+
+Alice:   Gail, please.
+Bob: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  You remind me of me when I was...I guess I was never like you. So cute. So questioning.
+
+Alice:   When can you leave?
+Bob:  You don't look angry.
+
+Alice:   It's not our mistake!
+Bob:  Why, you bully. I believe you would.
+
+Alice:   Well, goodbye.
+Bob: Goodbye!
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&quot;conclusions&quot;&gt;Conclusions&lt;/h2&gt;
+
+&lt;p&gt;These previous examples do not quite make sense. They are made of
+lines taken from different movies, and they refer to different
+entities. However there are glimpes of logic in the conversation: When
+Alice speaks about being ill Bob is worried about contagion. Some of
+the sentences before ‘Goodbye’ can be seen as a conversation stopper
+(especially in the last example). If you squeeze your eyes and just
+consider the &lt;em&gt;sentiment&lt;/em&gt; of the conversation you might see a meaning
+in those lines.&lt;/p&gt;
+
+&lt;p&gt;Sentiment is of course not enough for a reasonable conversation. This
+structure of dialogues should be refined upon using more sofisticated
+instruments.&lt;/p&gt;
+
+&lt;h2 id=&quot;code&quot;&gt;Code&lt;/h2&gt;
+
+&lt;p&gt;The code to reproduce these results is on my &lt;a href=&quot;https://github.com/fractalego/chatbots-dialogues-test&quot;&gt;github
+page&lt;/a&gt;.&lt;/p&gt;
+</content>
+<summary>Representing dialogues</summary>
+</entry>
+</feed>

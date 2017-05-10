@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Representing dialogues</title>
+  <meta name="description" content="Representing dialogues">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="/chatbot/2017/05/10/hurried-dialogues.html">
+  <link rel="alternate" type="application/rss+xml" title="Alberto Cetoli&#39;s blog" href="/feed.xml">
+  
+  
+</head>
+
+
+  <body>
+
+    <header class="site-header" role="banner">
+
+  <div class="wrapper">
+    
+    
+    <a class="site-title" href="/">Alberto Cetoli&#39;s blog</a>
+  
+    
+      <nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+              <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+              <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger">
+          
+            
+            
+            <a class="page-link" href="/about/">About</a>
+            
+          
+            
+            
+          
+            
+            
+          
+        </div>
+      </nav>
+    
+  </div>
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Representing dialogues</h1>
+    <p class="post-meta">
+      <time datetime="2017-05-10T00:18:39+01:00" itemprop="datePublished">
+        
+        May 10, 2017
+      </time>
+      </p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="representing-dialogues">Representing dialogues</h1>
+
+<p>For decades there has been a lot of interest in building
+chatbots. Natural language dialog generation is nonetheless in its
+infancy.</p>
+
+<p>Traditional approaches use a rule-based engine to react to a user’s
+input. These methods allow the programmer to design the behavior of a
+chatbot according to specific patterns. For example, a formalization
+of this techique can be found in the script language
+<a href="http://www.alicebot.org/aiml.html">AIML</a>. The main problem with
+rule-based systems is that they are about as good as the time invested
+into creating the rules.</p>
+
+<p>A more recent approach has emerged where the reaction to a user’s
+input is understood as a translation problem: the query is
+‘translated’ into a reply. This approach leaves room for learning the
+proper replies from a corpus of conversations.</p>
+
+<p>An example of this approach has been pioneered by Lee and Vinalis in
+<a href="https://arxiv.org/abs/1506.05869">this article</a>, where a sequence to
+sequence model is employed for the translation mechanism. The sequence
+to sequence model employes an ‘encoder’ that transforms a sentence
+into a vector. This vector is then fed into a ‘decoder’ which
+transforms it into a proper natural language reply.</p>
+
+<p>In order for this approach to be successful, the vector sandwiched
+between the encoder and the decoder should contain information about</p>
+
+<ol>
+  <li>The Semantics of the sentence (in particular entities and relations)</li>
+  <li>The pragmatic content</li>
+  <li>The general topic of the conversation</li>
+  <li>The intention of the user, which can be a long term goal beyond the
+current sentence</li>
+</ol>
+
+<p>Encoding all this information in a low-dimensional vector with a
+single RNN is a tall task, possibly unfeasible. For this reason
+<a href="https://arxiv.org/abs/1701.07149">hierarchical structures</a> of
+encoders-decoders have been proposed as an improvement to the original
+article</p>
+
+<p>One of these approaches is going to be successfull eventually. In this
+page we want to play with the high level structure of a conversation.</p>
+
+<h2 id="the-space-of-all-sentences">The space of all sentences</h2>
+
+<p>In the following we use the movie conversations available in the
+<a href="https://www.cs.cornell.edu/~cristian/Cornell_Movie-Dialogs_Corpus.html">Cornell Movie
+database</a>.
+All the movie lines that appear here are taken from that dataset and
+are used under the <a href="https://www.cs.cornell.edu/%7Ecristian/memorability_files/README.v1.0.txt">terms of the
+dataset</a>.</p>
+
+<p>All the sentences of the corpus can be translated into vectors, for
+example using the excellent doc2Vec model in
+<a href="https://radimrehurek.com/gensim/">gensim</a>.  More refined methods
+would not add much to the coarse-level description used here.</p>
+
+<p>Let us represent these vectors using t-SNE with low perplexity (here
+we used 5).</p>
+
+<p><img src="/images//vectors.png" alt="Image with all the vectors" /></p>
+
+<p>A granular structure appears (effectively by construction upon using
+low perplexity). These ‘grains’ are clusters of similar sentences,
+like ‘Goodbye!’, ‘Goodbye, my friend!’, ‘ Goodbye, my love, a thousand
+times goodbye.’</p>
+
+<p>Let us take a look at the first ten lines of the corpus:</p>
+
+<pre><code class="language-txt">
+A: Colonel Durnford... William Vereker. I hear you 've been seeking
+ Officers?
+B: Good ones, yes, Mr Vereker. Gentlemen who can ride and shoot
+
+
+A: Your orders, Mr Vereker?
+B: I'm to take the Sikali with the main column to the river
+
+
+A: Lord Chelmsford seems to want me to stay back with my Basutos.
+B: I think Chelmsford wants a good man on the border Why he fears a
+flanking attack and requires a steady Commander in reserve.
+
+
+A: Well I assure you, Sir, I have no desire to create difficulties. 45
+B: And I assure you, you do not In fact I'd be obliged for your best
+advice. What have your scouts seen?
+
+
+A: So far only their scouts. But we have had reports of a small Impi farther north, over there. 
+
+</code></pre>
+
+<p>This dialogue describes a path in the abstract space of sentences.</p>
+
+<p><img src="/images/path.png" alt="Image with a path" /></p>
+
+<h2 id="clustering-sentences">Clustering sentences</h2>
+
+<p>Every dialogue appears as a path in the space of sentences. All these
+paths would together constitute a <em>network</em>. In order to generalize the
+paths, we can cluster together all the ‘grains’ in the previous
+picture.</p>
+
+<p><img src="/images/clusters.png" alt="Image with the clusters" /></p>
+
+<p>Each of these red balls is the centroid of a cluster of ~300
+sentences. After clustering, one can build the network of all
+sentences by drawing an edge between nodes that have a sentence that
+follows another one. The result is the rather horrible picture</p>
+
+<p><img src="/images/network.png" alt="Image with the network" /></p>
+
+<p>This network is a connected graph, i.e. there are no isolated
+nodes. Note that this clustering needs to be done to create a
+connected graph in the sentence space. Without the clustering of
+sentences every node would be a sentence unique to a specific
+conversation.</p>
+
+<h2 id="generating-dialogues-of-two-people-in-a-hurry-computational-comedy">Generating dialogues of two people in a hurry (computational comedy)</h2>
+
+<p>Given a starting point and an end point, two people will naturally
+speak trying to end the conversation as soon as possible.</p>
+
+<p>According to the network representation, this means that the two
+people will try to reach the end of the conversation using the
+shortest path. One example is the following (generated) dialogue.</p>
+
+<pre><code class="language-txt">
+Alice:  Hello! How are you?
+Bob:  I should have listened to my wife. She said you were up to no good. Gossip.
+
+Alice:   Yeh, that'd be real nice of ya, Mr. Lonneman.
+Bob:  I can explain about the portal, darling.
+
+Alice:   Thanks
+Bob: Goodbye!
+
+</code></pre>
+
+<p>The corresponding path is</p>
+
+<p><img src="/images/chat_path.png" alt="Image with a path" /></p>
+
+<p>The sentence number 1 is ‘Hello! How are you?’, whereas number 5 is
+‘Goodbye!’. It is interesting to see that these two sentences are
+nicely projected at opposite sides of the map.</p>
+
+<p>All the lines in the dialogue are taken from the Cornell movie
+dataset. No single sentence is original. What is presentented here is
+simply a re-arrangement of the sentences according to the following
+algorith:</p>
+
+<pre><code class="language-txt">1. Read an input line and a goal sentence ('Hello!', 'Goodbye!').
+2. Find the node in the sentence network that is closest to the input line.
+3. Find the shortest path between this line and the goal.
+4. Find the next vertex in this path
+5. Choose randomly a movie line belonging to this next vertex (each vertex
+represent a cluster of ~300 lines)
+4. Repeat with this last line as an input upon keeping the same goal
+sentence.
+</code></pre>
+
+<p>There is an additional random component: Associating a node to an
+input line is a noisy process. Given the same initial and ending
+sentences there can be also variations in the number of nodes, as the
+following examples show:</p>
+
+<pre><code class="language-txt">
+Alice:  Hello! How are you?
+Bob:  How come nobody knows about him? And you do?
+
+Alice:   You kids are making too much damn noise.
+Bob:  I dont recollect mentioning a friend.
+
+Alice:   Leave him alone, he's got swine fever.
+Bob:  Indisposed, sir.
+
+Alice: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  I'm serious, man. Don't mention it. Ever.
+
+Alice:   Gotta be one of his disciples or something.
+Bob:  Leave me alone! He's going to kill me!!
+
+Alice:   Well, I held it like an egg.
+Bob: Goodbye!
+
+
+--
+
+
+Alice:  Hello! How are you?
+Bob:  Take a look for yourself.
+
+Alice: I'm dying, Claudia.  I have cancer. I have cancer and I'm
+dying, soon. It's metastasized in my bones and I --
+Bob:  You're not contagious are you?
+
+Alice:   They guys here aren't going to be able to hold out until battalion shows up.
+Bob:  Right.  Bombardier, to me please.
+
+Alice: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  I'm Jill. I really like your show. I think you're great.
+
+Alice:   I had to come.  To be sure you were okay.
+Bob: Just everything.  You.  California.  The beach.  This spot right
+here.  I feel like I belong here, you know?  It just feels right.
+
+Alice:   The friend of John's that was staying at your house.
+Bob:  Leave him alone. She's his mother, not yours.
+
+Alice:   Gail, please.
+Bob: Goodbye!
+
+
+---
+
+
+Alice:  Hello! How are you?
+Bob:  You remind me of me when I was...I guess I was never like you. So cute. So questioning.
+
+Alice:   When can you leave?
+Bob:  You don't look angry.
+
+Alice:   It's not our mistake!
+Bob:  Why, you bully. I believe you would.
+
+Alice:   Well, goodbye.
+Bob: Goodbye!
+</code></pre>
+
+<h2 id="conclusions">Conclusions</h2>
+
+<p>These previous examples do not quite make sense. They are made of
+lines taken from different movies, and they refer to different
+entities. However there are glimpes of logic in the conversation: When
+Alice speaks about being ill Bob is worried about contagion. Some of
+the sentences before ‘Goodbye’ can be seen as a conversation stopper
+(especially in the last example). If you squeeze your eyes and just
+consider the <em>sentiment</em> of the conversation you might see a meaning
+in those lines.</p>
+
+<p>Sentiment is of course not enough for a reasonable conversation. This
+structure of dialogues should be refined upon using more sofisticated
+instruments.</p>
+
+<h2 id="code">Code</h2>
+
+<p>The code to reproduce these results is on my <a href="https://github.com/fractalego/chatbots-dialogues-test">github
+page</a>.</p>
+
+  </div>
+
+  
+</article>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Alberto Cetoli&#39;s blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            
+              Alberto Cetoli&#39;s blog
+            
+            </li>
+            
+            <li><a href="mailto:could it be alberto at contextscout adding a dot com ?">could it be alberto at contextscout adding a dot com ?</a></li>
+            
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/fractalego"><span class="icon icon--github"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">fractalego</span></a>
+
+          </li>
+          
+
+          
+          <li>
+            <a href="https://twitter.com/fractalego"><span class="icon icon--twitter"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M15.969,3.058c-0.586,0.26-1.217,0.436-1.878,0.515c0.675-0.405,1.194-1.045,1.438-1.809c-0.632,0.375-1.332,0.647-2.076,0.793c-0.596-0.636-1.446-1.033-2.387-1.033c-1.806,0-3.27,1.464-3.27,3.27 c0,0.256,0.029,0.506,0.085,0.745C5.163,5.404,2.753,4.102,1.14,2.124C0.859,2.607,0.698,3.168,0.698,3.767 c0,1.134,0.577,2.135,1.455,2.722C1.616,6.472,1.112,6.325,0.671,6.08c0,0.014,0,0.027,0,0.041c0,1.584,1.127,2.906,2.623,3.206 C3.02,9.402,2.731,9.442,2.433,9.442c-0.211,0-0.416-0.021-0.615-0.059c0.416,1.299,1.624,2.245,3.055,2.271 c-1.119,0.877-2.529,1.4-4.061,1.4c-0.264,0-0.524-0.015-0.78-0.046c1.447,0.928,3.166,1.469,5.013,1.469 c6.015,0,9.304-4.983,9.304-9.304c0-0.142-0.003-0.283-0.009-0.423C14.976,4.29,15.531,3.714,15.969,3.058z"/></svg>
+</span><span class="username">fractalego</span></a>
+
+          </li>
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>I am a research engineer at Context Scout and an OSS developer for NLUlite.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>
